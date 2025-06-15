@@ -4,6 +4,7 @@ import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { DocumentParser } from './services/documentParser.js';
+import { ProfessionalPdfGenerator } from './services/pdfGenerator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,6 +14,7 @@ const port = process.env.PORT || 3001;
 
 // サービス初期化
 const documentParser = new DocumentParser();
+const pdfGenerator = new ProfessionalPdfGenerator();
 
 // Middleware
 app.use(cors());
@@ -60,8 +62,8 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
 });
 
-// ファイルアップロード・解析エンドポイント
-app.post('/api/upload', upload.single('file'), async (req, res) => {
+// ファイルアップロード・解析・PDF変換統合エンドポイント
+app.post('/api/upload', upload.single('document'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'ファイルが選択されていません' });
@@ -83,8 +85,28 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       });
     }
 
+    // プロフェッショナルPDF生成
+    console.log(`🎨 PDF変換開始: ${req.file.originalname}`);
+    
+    const pdfResult = await pdfGenerator.generatePdf(
+      parseResult.content!.text,
+      req.file.originalname,
+      {
+        title: path.parse(req.file.originalname).name,
+        author: 'ReportFormatter Pro',
+        includeExecutiveSummary: true
+      }
+    );
+
+    if (!pdfResult.success) {
+      return res.status(500).json({
+        error: 'PDF生成に失敗しました',
+        details: pdfResult.error
+      });
+    }
+
     res.json({
-      message: 'ファイルアップロード・解析成功',
+      message: 'ファイル処理・PDF変換完了',
       file: {
         originalName: req.file.originalname,
         filename: req.file.filename,
@@ -92,11 +114,37 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
         mimetype: req.file.mimetype,
         path: req.file.path
       },
-      content: parseResult.content
+      content: parseResult.content,
+      pdf: {
+        path: pdfResult.pdfPath,
+        metadata: pdfResult.metadata
+      }
     });
   } catch (error) {
-    console.error('Upload/Parse error:', error);
+    console.error('Upload/Parse/PDF error:', error);
     res.status(500).json({ error: 'ファイル処理に失敗しました' });
+  }
+});
+
+// PDFダウンロードエンドポイント
+app.get('/api/download/:filename', (req, res) => {
+  try {
+    const filename = req.params.filename;
+    const filePath = path.join(__dirname, '..', 'generated', filename);
+    
+    // ファイル存在確認
+    if (!require('fs').existsSync(filePath)) {
+      return res.status(404).json({ error: 'ファイルが見つかりません' });
+    }
+    
+    // PDFダウンロード
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.sendFile(filePath);
+    
+  } catch (error) {
+    console.error('Download error:', error);
+    res.status(500).json({ error: 'ファイルダウンロードに失敗しました' });
   }
 });
 
