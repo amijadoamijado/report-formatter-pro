@@ -3,12 +3,16 @@ import cors from 'cors';
 import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { DocumentParser } from './services/documentParser.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 3001;
+
+// サービス初期化
+const documentParser = new DocumentParser();
 
 // Middleware
 app.use(cors());
@@ -56,26 +60,43 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
 });
 
-// ファイルアップロードエンドポイント
-app.post('/api/upload', upload.single('file'), (req, res) => {
+// ファイルアップロード・解析エンドポイント
+app.post('/api/upload', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'ファイルが選択されていません' });
     }
 
+    console.log(`📄 ファイル受信: ${req.file.originalname}`);
+    
+    // 文書解析実行
+    const parseResult = await documentParser.parseDocument(
+      req.file.path,
+      req.file.originalname,
+      req.file.mimetype
+    );
+    
+    if (!parseResult.success) {
+      return res.status(400).json({ 
+        error: '文書解析に失敗しました',
+        details: parseResult.error
+      });
+    }
+
     res.json({
-      message: 'ファイルアップロード成功',
+      message: 'ファイルアップロード・解析成功',
       file: {
         originalName: req.file.originalname,
         filename: req.file.filename,
         size: req.file.size,
         mimetype: req.file.mimetype,
         path: req.file.path
-      }
+      },
+      content: parseResult.content
     });
   } catch (error) {
-    console.error('Upload error:', error);
-    res.status(500).json({ error: 'ファイルアップロードに失敗しました' });
+    console.error('Upload/Parse error:', error);
+    res.status(500).json({ error: 'ファイル処理に失敗しました' });
   }
 });
 

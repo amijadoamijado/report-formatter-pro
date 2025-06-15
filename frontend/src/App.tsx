@@ -9,6 +9,13 @@ interface UploadResponse {
     size: number;
     mimetype: string;
   };
+  content?: {
+    text: string;
+    originalFilename: string;
+    fileType: string;
+    wordCount: number;
+    extractedAt: string;
+  };
 }
 
 function App() {
@@ -89,16 +96,43 @@ function App() {
           
           {/* アップロード成功表示 */}
           {uploadResult && (
-            <div className="max-w-2xl mx-auto p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="max-w-4xl mx-auto p-6 bg-green-50 border border-green-200 rounded-lg">
               <div className="flex">
                 <div className="text-green-500 mr-3">✅</div>
-                <div>
-                  <h3 className="text-green-800 font-medium">アップロード成功</h3>
-                  <div className="text-green-700 text-sm mt-1">
+                <div className="flex-1">
+                  <h3 className="text-green-800 font-medium mb-3">アップロード・解析成功</h3>
+                  
+                  {/* ファイル情報 */}
+                  <div className="text-green-700 text-sm mb-4">
                     <p><strong>ファイル名:</strong> {uploadResult.file.originalName}</p>
                     <p><strong>サイズ:</strong> {(uploadResult.file.size / 1024 / 1024).toFixed(2)} MB</p>
                     <p><strong>形式:</strong> {uploadResult.file.mimetype}</p>
                   </div>
+                  
+                  {/* 解析結果 */}
+                  {uploadResult.content && (
+                    <div className="border-t border-green-200 pt-4">
+                      <h4 className="text-green-800 font-medium mb-2">文書解析結果</h4>
+                      <div className="text-green-700 text-sm mb-3">
+                        <p><strong>文字数:</strong> {uploadResult.content.wordCount.toLocaleString()}文字</p>
+                        <p><strong>解析日時:</strong> {new Date(uploadResult.content.extractedAt).toLocaleString('ja-JP')}</p>
+                      </div>
+                      
+                      {/* テキストプレビュー */}
+                      <div className="bg-white p-4 rounded border border-green-200">
+                        <h5 className="text-green-800 font-medium mb-2">テキストプレビュー</h5>
+                        <div className="text-gray-700 text-sm max-h-40 overflow-y-auto whitespace-pre-wrap">
+                          {uploadResult.content.text.length > 500 
+                            ? uploadResult.content.text.substring(0, 500) + '...'
+                            : uploadResult.content.text
+                          }
+                        </div>
+                        {uploadResult.content.text.length > 500 && (
+                          <p className="text-green-600 text-xs mt-2">…さらに {uploadResult.content.text.length - 500} 文字</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
