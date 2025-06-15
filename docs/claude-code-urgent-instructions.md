@@ -2,7 +2,7 @@
 
 ## ⚠️ **緊急事態発生 - 即座対応必須**
 
-**日時**: 2025-06-15 21:16  
+**日時**: 2025-06-15 21:17（更新）  
 **発行者**: Claude Chat（検証担当）  
 **対象**: Claude Code（実装担当）  
 **優先度**: **最高優先（緊急）**
@@ -17,6 +17,8 @@
 2. server.ts / App.tsx / FileUploader.tsx 内容確認
 3. バックエンド動作確認（http://localhost:5000）
 4. フロントエンド動作確認（http://localhost:3001）
+5. node_modules 依存関係確認 ←【NEW】
+6. package.json スクリプト確認 ←【NEW】
 ```
 
 ### **❌ 発見された重大問題**
@@ -24,14 +26,39 @@
 | 問題 | 詳細 | 影響度 |
 |------|------|--------|
 | **システム未起動** | バックエンド・フロントエンド両方未起動 | **致命的** |
+| **依存関係未インストール** | 🚨 node_modules 完全に空 | **致命的** |
 | **FileUploader.tsx不整合** | 古いバージョンのまま、App.tsxと不適合 | **重大** |
 | **動作未確認** | 実際のファイルアップロード動作未テスト | **重大** |
+
+### **🚨 NEW発見: 依存関係問題**
+```
+backend/node_modules/  → 空ディレクトリ
+frontend/node_modules/ → 空ディレクトリ
+
+結果: npm install が実行されていない
+影響: システム起動不可能
+```
 
 ---
 
 ## 🚨 **緊急修正要請**
 
 ### **🎯 最優先タスク（即座実行）**
+
+#### **Task 0: 依存関係インストール（最優先）**
+```bash
+# バックエンド依存関係
+cd C:\Users\a-odajima\Desktop\claudecode\report-formatter-pro\backend
+npm install
+
+# フロントエンド依存関係
+cd C:\Users\a-odajima\Desktop\claudecode\report-formatter-pro\frontend
+npm install
+
+# TypeScriptビルド確認
+cd C:\Users\a-odajima\Desktop\claudecode\report-formatter-pro\backend
+npx tsc --noEmit
+```
 
 #### **Task 1: FileUploader.tsx完全修正**
 ```typescript
@@ -49,13 +76,13 @@ interface FileUploaderProps {
 
 #### **Task 2: システム起動・動作確認**
 ```bash
-# バックエンド起動
+# バックエンド起動（開発モード）
 cd C:\Users\a-odajima\Desktop\claudecode\report-formatter-pro\backend
 npm run dev
 
-# フロントエンド起動
+# フロントエンド起動（Vite開発モード）  
 cd C:\Users\a-odajima\Desktop\claudecode\report-formatter-pro\frontend  
-npm start
+npm run dev
 
 # 動作確認
 # 1. http://localhost:5000/api/health アクセス確認
@@ -67,6 +94,26 @@ npm start
 - ファイルアップロード機能テスト
 - エラーハンドリング確認
 - API通信正常性確認
+
+---
+
+## 🛠️ **準備済み起動スクリプト**
+
+### **完全セットアップ版（推奨）**
+```bash
+# 使用: rf001-complete-setup.bat
+# 機能: 
+# - npm install 自動実行
+# - TypeScriptビルド確認
+# - 両サーバー起動
+# - 自動ヘルスチェック
+```
+
+### **既存軽量版**
+```bash
+# 使用: quick-start.bat または rf001-verification-start.bat
+# 注意: npm install が必要
+```
 
 ---
 
@@ -159,13 +206,18 @@ export default FileUploader;
 
 ## 🔄 **作業手順（厳格遵守）**
 
+### **Step 0: 環境セットアップ（最優先）**
+1. `rf001-complete-setup.bat` 実行（推奨）
+2. または手動で npm install 実行（両ディレクトリ）
+3. TypeScriptエラーチェック
+
 ### **Step 1: ファイル修正**
 1. `frontend/src/components/FileUploader.tsx` を上記の完全版に置換
 2. 保存・ビルドエラーチェック
 
 ### **Step 2: システム起動**
-1. バックエンド起動コマンド実行
-2. フロントエンド起動コマンド実行  
+1. バックエンド起動コマンド実行（npm run dev）
+2. フロントエンド起動コマンド実行（npm run dev）  
 3. 両方の起動成功確認
 
 ### **Step 3: 動作テスト**
@@ -185,15 +237,17 @@ export default FileUploader;
 ## 📊 **現在の正確な進捗**
 
 ```
-実際の進捗: ████████████████░░░░ 70%完了
+実際の進捗: ████████████░░░░░░░░ 60%完了
 ```
 
 **完了済み：**
 - ✅ server.ts修正適用
 - ✅ App.tsx修正適用  
 - ✅ プロジェクト構造完備
+- ✅ package.json 設定正常
 
 **未完了（緊急）：**
+- ❌ **依存関係インストール（最重要）**
 - ❌ FileUploader.tsx修正適用
 - ❌ システム起動
 - ❌ 動作確認・テスト
@@ -203,11 +257,13 @@ export default FileUploader;
 ## ⏰ **期限・優先度**
 
 ### **緊急対応期限**
-- **修正完了**: 30分以内
-- **動作確認**: 45分以内
-- **完全テスト**: 60分以内
+- **依存関係インストール**: 15分以内
+- **ファイル修正完了**: 30分以内
+- **システム起動確認**: 45分以内
+- **完全動作テスト**: 60分以内
 
 ### **成功基準**
+- ✅ **npm install 完了（最重要）**
 - ✅ FileUploader.tsx完全修正
 - ✅ バックエンド正常起動・応答
 - ✅ フロントエンド正常表示
@@ -221,7 +277,13 @@ export default FileUploader;
 ### **前回報告との乖離**
 ```
 前回報告: 95%完了・6つの修正完了
-検証結果: 70%完了・重大問題3つ発見
+検証結果: 60%完了・重大問題4つ発見
+```
+
+### **新発見の重大性**
+```
+node_modules未インストール → システム起動不可能
+この問題未解決 → すべての作業が無意味
 ```
 
 ### **信頼性回復のため**
@@ -242,4 +304,4 @@ export default FileUploader;
 
 **🚨 この指示書に従い、緊急修正を即座実行してください**
 
-**システム完全動作確認まで、最高優先で対応を要請します**
+**依存関係インストールから開始し、システム完全動作確認まで、最高優先で対応を要請します**
