@@ -1,13 +1,19 @@
-# RF001 Claude Code実装指示書【緊急修正依頼】
+# RF001 Claude Code完全自己完結型実装指示書【WSL環境対応】
 
-## 🚨 現在の状況
+## 🚨 重要：WSL環境制約
+- ❌ **mem0利用不可**：WSL環境のためmem0にアクセスできません
+- ✅ **GitHub・ローカルファイルのみ利用**：この指示書で完全な情報を提供
 
-### Playwrightテスト診断結果
-- **バックエンド**: ✅ 正常稼働中（localhost:5000）
+---
+
+## 📋 現在の状況（Playwright診断結果）
+
+### 確認済み状況
+- **バックエンド**: ✅ 正常稼働中（localhost:5000、766時間稼働）
 - **フロントエンド**: ⚠️ 表示されるが、修正版コード未反映
 - **エラー**: ❌ 「Conversion failed」HTTP 500エラー継続
 
-### 問題の本質
+### 根本問題
 ```
 ❌ 修正版ファイル作成済みだが、実際の稼働環境に反映されていない
 ❌ 複雑なキャッシュ・ビルド・バージョン管理問題
@@ -16,211 +22,263 @@
 
 ---
 
-## 📋 実行済み修正内容
+## 🔧 GitHub保存済み修正版ファイル
 
-### 1. server.ts修正 (バックエンド)
-**場所**: `C:\Users\a-odajima\Desktop\claudecode\report-formatter-pro\backend\src\server.ts`
+### 1. バックエンド修正版
+**GitHub場所**: `backend/src/server-fixed.ts`
+**適用先**: `backend/src/server.ts`
 
-**修正内容**:
-- DocumentParser呼び出し修正（mimetypeパラメータ追加）
+**主要修正点**:
+- DocumentParser呼び出しにmimetypeパラメータ追加
 - 存在しないcreateSampleDocumentメソッド削除
 - サンプルドキュメント生成を実際のオブジェクトに変更
-- レスポンス処理修正
+- レスポンス処理のプロパティアクセスエラー修正
 
-### 2. App.tsx修正 (フロントエンド)
-**場所**: `C:\Users\a-odajima\Desktop\claudecode\report-formatter-pro\frontend\src\App.tsx`
+### 2. フロントエンド修正版
+**GitHub場所**: `frontend/src/App-fixed.tsx`
+**適用先**: `frontend/src/App.tsx`
 
-**修正内容**:
-- GitHub最新版に同期
+**主要修正点**:
 - エンドポイント修正：`localhost:3001` → `localhost:5000`
 - FormDataフィールド名修正：`'file'` → `'document'`
 
-### 3. FileUploader.tsx修正 (フロントエンド)
-**場所**: `C:\Users\a-odajima\Desktop\claudecode\report-formatter-pro\frontend\src\components\FileUploader.tsx`
+### 3. FileUploader修正版
+**GitHub場所**: `frontend/src/components/FileUploader-fixed.tsx`
+**適用先**: `frontend/src/components/FileUploader.tsx`
 
-**修正内容**:
+**主要修正点**:
 - APIエンドポイント修正：`/api/upload` → `http://localhost:5000/api/upload`
 - FormDataフィールド名修正：`'file'` → `'document'`
 
 ---
 
-## 🎯 Claude Code実装依頼
+## 🎯 Claude Code実装タスク
 
-### 緊急修正タスク
-
-#### Task 1: 実際の稼働コード特定
+### Task 1: プロジェクト状況確認
 ```bash
-# 現在稼働中のアプリケーション構造確認
-cd C:\Users\a-odajima\Desktop\claudecode\report-formatter-pro
-find . -name "*.tsx" -o -name "*.ts" | head -20
+# プロジェクトディレクトリ移動
+cd /mnt/c/Users/a-odajima/Desktop/claudecode/report-formatter-pro
 
-# 実際にビルドされているファイル確認
-ls -la frontend/build/ 2>/dev/null || echo "No build directory"
-ls -la frontend/dist/ 2>/dev/null || echo "No dist directory"
+# 現在のファイル構造確認
+ls -la backend/src/
+ls -la frontend/src/
+ls -la frontend/src/components/
+
+# 現在稼働中プロセス確認
+ps aux | grep node
+netstat -tulpn | grep :3001
+netstat -tulpn | grep :5000
 ```
 
-#### Task 2: ビルド環境完全クリーンアップ
+### Task 2: 修正版ファイル適用
 ```bash
-# 全プロセス終了
-pkill -f "node.*3001"
-pkill -f "node.*5000"
+# GitHubから修正版ファイルをダウンロード・適用
+curl -o backend/src/server.ts https://raw.githubusercontent.com/amijadoamijado/report-formatter-pro/main/backend/src/server-fixed.ts
 
-# キャッシュ・ビルド削除
+curl -o frontend/src/App.tsx https://raw.githubusercontent.com/amijadoamijado/report-formatter-pro/main/frontend/src/App-fixed.tsx
+
+curl -o frontend/src/components/FileUploader.tsx https://raw.githubusercontent.com/amijadoamijado/report-formatter-pro/main/frontend/src/components/FileUploader-fixed.tsx
+
+# ファイル適用確認
+echo "=== 修正版ファイル適用確認 ==="
+head -20 backend/src/server.ts
+head -10 frontend/src/App.tsx
+head -10 frontend/src/components/FileUploader.tsx
+```
+
+### Task 3: 完全クリーンビルド実行
+```bash
+# 全プロセス強制終了
+pkill -f "node.*3001" 2>/dev/null
+pkill -f "node.*5000" 2>/dev/null
+sleep 3
+
+# キャッシュ・ビルド完全削除
 cd frontend
-rm -rf node_modules/.cache
-rm -rf build dist .next
+rm -rf node_modules/.cache build dist .next 2>/dev/null
 npm cache clean --force
 
-cd ../backend  
-rm -rf node_modules/.cache
-rm -rf dist build
+cd ../backend
+rm -rf node_modules/.cache build dist 2>/dev/null
 npm cache clean --force
-```
 
-#### Task 3: 修正版強制適用
-```bash
 # 依存関係再インストール
-cd frontend && npm ci
+cd ../frontend && npm ci
 cd ../backend && npm ci
-
-# 修正版ファイルの確実適用
-# - 修正されたファイルの内容確認
-# - 実際のビルドプロセスでの反映確認
 ```
 
-#### Task 4: エラー根本原因特定・修正
-```javascript
-// バックエンドログ確認
-console.log("=== SERVER ERROR DEBUGGING ===");
-
-// DocumentParser呼び出し確認
-// ファイルアップロード処理の詳細トレース
-// API レスポンス形式の確認
-```
-
-#### Task 5: 完全動作テスト
+### Task 4: 修正版システム起動
 ```bash
-# 修正版システム起動
-cd backend && npm run dev &
-cd frontend && npm start &
+# バックエンド起動
+cd backend
+npm run dev &
+BACKEND_PID=$!
+echo "Backend PID: $BACKEND_PID"
 
-# 動作確認
-curl http://localhost:5000/health
-curl http://localhost:5000/api/templates
+# 起動確認（8秒待機）
+sleep 8
+curl -s http://localhost:5000/health | jq .
+
+# フロントエンド起動
+cd ../frontend
+npm start &
+FRONTEND_PID=$!
+echo "Frontend PID: $FRONTEND_PID"
+
+# 起動確認（30秒待機）
+sleep 30
+curl -s http://localhost:3001 | head -10
+```
+
+### Task 5: 動作確認テスト
+```bash
+# APIエンドポイントテスト
+echo "=== API動作確認 ==="
+curl -s http://localhost:5000/health | jq .status
+curl -s http://localhost:5000/api/templates | jq .success
+
+# test-sample.txtでアップロードテスト
+echo "=== ファイルアップロードテスト ==="
+if [ -f "test-sample.txt" ]; then
+    curl -X POST -F "document=@test-sample.txt" http://localhost:5000/api/upload
+else
+    echo "test-sample.txt作成中..."
+    echo "ReportFormatter Pro テスト用サンプルドキュメント
+
+## エグゼクティブサマリー
+本レポートは、ReportFormatter Proシステムのテスト用サンプルです。
+
+## 主要な発見事項
+1. ファイルアップロード機能の検証
+2. 文書解析エンジンの動作確認
+3. PDF生成機能のテスト
+
+## 結論
+システムの動作確認が完了しました。" > test-sample.txt
+    
+    curl -X POST -F "document=@test-sample.txt" http://localhost:5000/api/upload
+fi
 ```
 
 ---
 
-## 📁 重要ファイル情報
+## 📊 期待される修正後の動作
 
-### プロジェクト構造
-```
-C:\Users\a-odajima\Desktop\claudecode\report-formatter-pro\
-├── backend\
-│   ├── src\
-│   │   ├── server.ts          ← 修正済み（要確認）
-│   │   └── services\
-│   │       ├── documentParser.ts
-│   │       ├── layoutEngine.ts
-│   │       └── pdfGenerator.ts
-├── frontend\
-│   ├── src\
-│   │   ├── App.tsx           ← 修正済み（要確認）
-│   │   └── components\
-│   │       └── FileUploader.tsx ← 修正済み（要確認）
-└── test-sample.txt           ← テスト用ファイル
+### 成功パターン
+```json
+// アップロード成功レスポンス
+{
+  "success": true,
+  "message": "文書解析が完了しました",
+  "document": {
+    "id": "1234567890",
+    "title": "test-sample.txt",
+    "wordCount": 150,
+    "extractedAt": "2025-06-15T20:30:00.000Z"
+  }
+}
 ```
 
-### GitHub状況
-- **リポジトリ**: https://github.com/amijadoamijado/report-formatter-pro
-- **最新コミット**: 修正前の状態
-- **必要**: 修正版コミット・プッシュ
+### エラー解消確認
+- ❌ 「Conversion failed」→ ✅ 正常処理
+- ❌ HTTP 500エラー → ✅ HTTP 200レスポンス
+- ❌ JSON Parse Error → ✅ 正常JSONレスポンス
 
 ---
 
-## 🔍 詳細エラー情報
+## 🔍 トラブルシューティング
 
-### Playwrightで確認されたエラー
-```
-HTTP 500: Internal Server Error
-Error: Conversion failed
-JSON Parse Error: Unexpected token 'T'
-Rate limiting: HTTP 429 (解決済み)
+### 問題1: ファイル適用されない
+```bash
+# ファイル内容確認
+grep -n "parseDocument.*mimetype" backend/src/server.ts
+grep -n "localhost:5000" frontend/src/App.tsx
+grep -n "document.*formData" frontend/src/components/FileUploader.tsx
 ```
 
-### 期待される動作
+### 問題2: 起動エラー
+```bash
+# ログ確認
+tail -50 ~/.npm/_logs/*.log
+ps aux | grep node
 ```
-✅ ファイルアップロード成功
-✅ DocumentParser正常実行
-✅ PDF生成・ダウンロード成功
-✅ エラーログクリーン
+
+### 問題3: ポート競合
+```bash
+# ポート使用状況確認
+sudo netstat -tulpn | grep :3001
+sudo netstat -tulpn | grep :5000
+
+# 必要に応じてプロセス終了
+sudo kill -9 $(lsof -ti:3001)
+sudo kill -9 $(lsof -ti:5000)
 ```
 
 ---
 
-## 📊 成功基準
+## 📋 成功基準・検証方法
 
 ### 必須達成項目
 - [ ] ファイルアップロード時にエラーなし
 - [ ] 「Conversion failed」エラー解消
 - [ ] HTTP 500エラー解消
 - [ ] test-sample.txtの正常処理
-- [ ] PDF生成・ダウンロード成功
+- [ ] JSON正常レスポンス
 
-### 品質基準
-- [ ] TypeScript エラーなし
-- [ ] ESLint 警告なし
-- [ ] Console.log にエラーなし
-- [ ] 全APIエンドポイント正常動作
+### 検証コマンド
+```bash
+# 1. ヘルスチェック
+curl -s http://localhost:5000/health | jq .status
+
+# 2. テンプレート取得
+curl -s http://localhost:5000/api/templates | jq .success
+
+# 3. ファイルアップロード
+curl -X POST -F "document=@test-sample.txt" http://localhost:5000/api/upload | jq .
+
+# 4. フロントエンド表示確認
+curl -s http://localhost:3001 | grep "ReportFormatter Pro"
+```
 
 ---
 
 ## 🚀 最終目標
 
 **ReportFormatter Pro完全動作システム**
-1. ファイルアップロード → 文書解析 → PDF生成 → ダウンロード
-2. エラーなし・プロフェッショナル品質
-3. 企業グレードの信頼性
+1. ✅ ファイルアップロード → 文書解析 → 成功レスポンス
+2. ✅ エラーなし・プロフェッショナル品質
+3. ✅ 企業グレードの信頼性
 
 ---
 
-## 📝 作業報告形式
+## 📝 作業完了報告形式
 
-### 進捗報告
-```markdown
-## [時刻] 作業状況報告
-### 実行内容
-- [具体的作業]
-
-### 発見事項
-- [問題・発見]
-
-### 次のアクション
-- [次の作業]
-```
-
-### 完了報告
+### 完了報告テンプレート
 ```markdown
 ## RF001 修正完了報告
-### 修正内容
-- [修正詳細]
+
+### 実行タスク
+- [x] Task 1: プロジェクト状況確認
+- [x] Task 2: 修正版ファイル適用
+- [x] Task 3: 完全クリーンビルド実行
+- [x] Task 4: 修正版システム起動
+- [x] Task 5: 動作確認テスト
+
+### 修正結果
+- ファイルアップロード: ✅ 成功/❌ 失敗
+- エラー解消: ✅ 解消/❌ 継続
+- API動作: ✅ 正常/❌ エラー
 
 ### テスト結果
-- [動作確認結果]
+```bash
+# 実際のテスト結果をここに貼り付け
+```
 
-### GitHub状況
-- [コミット状況]
+### GitHub更新
+- [ ] 修正完了コミット・プッシュ実行
+- [ ] 最終動作確認スクリーンショット
 ```
 
 ---
 
-## ⚠️ 重要な注意事項
-
-1. **バックアップ**: 重要ファイルの変更前バックアップ
-2. **段階的確認**: 各修正後の動作確認
-3. **ログ記録**: 詳細なエラーログ・修正ログ保持
-4. **GitHub同期**: 修正完了時の確実なコミット・プッシュ
-
----
-
-**この指示書に従い、RF001システムを完全動作状態にしてください。**
+**この指示書の内容で、mem0を使わずにRF001システムを完全動作状態にしてください。**
